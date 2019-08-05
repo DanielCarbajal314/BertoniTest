@@ -1,0 +1,106 @@
+﻿@{
+    ViewBag.Title = "Bertoni Test";
+}
+    <div class="container col-md-12" id="app">
+        <div class="panel panel-default" v-for="album in Albums">
+            <div class="panel-heading">
+                <h2>{{album.Tittle}}</h2>
+                <button class="btn btn-primary" v-on:click="getPhotos(album)"> {{album.ButtonText}} </button>
+            </div>
+            <div class="panel-body" v-if="album.AlbumShowPhotos">
+                <div class="row">
+                    <div v-for="photo in album.Photos" class="col-sm-6 col-md-4">
+                        <div class="thumbnail">
+                            <img  v-bind:src="photo.ThumbnailUrl">
+                            <div class="caption">
+                                <h3>{{photo.Tittle}}</h3>
+                                <p><button class="btn btn-primary" v-on:click="showPhoto(photo)">{{photo.ButtonText}}</button></p>
+                                <ul v-if="photo.ShowCommentList">
+                                    <li v-for="comment in photo.Comments">
+                                        <b>{{comment.Name}} : </b> {{comment.Body}}
+                                    </li>
+                                </ul>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+<script>
+    var app = new Vue({
+      el: '#app',
+      data: {
+        Albums:[]
+      },
+      methods: {
+          getAlbumsFromServer: function () {
+              $.get('/api/PhotoAlbum/Albums')
+                  .then(albumList => {
+                      this.Albums = albumList.map(albumItem => {
+                          albumItem.PhotoQueried = false;
+                          albumItem.ButtonText = "Visualizar Álbum";
+                          albumItem.Photos = [];
+                          albumItem.AlbumShowPhotos = false;
+                          return albumItem;
+                      });
+                  })
+          },
+          getPhotos: function (album) {
+              if (!album.PhotoQueried) {
+                  $.get(`/api/PhotoAlbum/PhotosFromAlbum?AlbumId=${album.Id}`)
+                      .then(photoList => {
+                          album.PhotoQueried = true;
+                          album.AlbumShowPhotos = true;
+                          album.ButtonText = "Esconder Álbum";
+                          album.Photos = photoList.map(x => {
+                              x.ButtonText = "Mostrar Comentarios";
+                              x.ShowCommentList = false;
+                              x.CommentsQueried = false;
+                              x.Comments = [];
+                              return x;
+                          });
+                      })
+              }
+              else {
+                  if (album.AlbumShowPhotos) {
+                      album.AlbumShowPhotos = false;
+                      album.ButtonText = "Visualizar Álbum";
+                  }
+                  else {
+                      album.AlbumShowPhotos = true;
+                      album.ButtonText = "Esconder Álbum";
+                  }
+              }
+          },
+          showPhoto: function (photo) {
+                if (!photo.CommentsQueried) {
+                    $.get(`/api/PhotoAlbum/CommentsFromPhoto?PhotoId=${photo.Id}`)
+                        .then(photoList => {
+                            photo.CommentsQueried = true;
+                            photo.ShowCommentList = true;
+                            photo.Comments = photoList;
+                            photo.ButtonText = "Esconder Álbum";
+                        })
+                }
+                else {
+                    if (photo.ShowCommentList) {
+                        photo.ShowCommentList = false;
+                        photo.ButtonText = "Visualizar Álbum";
+                    }
+                    else {
+                        photo.ShowCommentList = true;
+                        photo.ButtonText = "Esconder Álbum";
+                    }
+                }
+          }
+
+      }
+    })
+
+    app.getAlbumsFromServer();
+
+</script>
